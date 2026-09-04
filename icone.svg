@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 180 180" width="180" height="180">
+  <title>KHALAM — l'interprète : deux langues, même poids</title>
+  <rect width="180" height="180" fill="#0B1020"/>
+  <g fill="none" stroke="#C9A227" stroke-linecap="round" stroke-linejoin="round">
+    <path d="M46 64 Q90 48 134 64" stroke-width="7"/>
+    <circle cx="90" cy="53" r="5.5" stroke-width="6"/>
+    <path d="M46 64 V76" stroke-width="3.5"/><path d="M134 64 V76" stroke-width="3.5"/>
+    <path d="M24 76 H68 L61 92 Q46 99 31 92 Z" stroke-width="6"/>
+    <path d="M112 76 H156 L149 92 Q134 99 119 92 Z" stroke-width="6"/>
+    <path d="M90 58 V126" stroke-width="7"/>
+    <path d="M70 132 Q90 120 110 132" stroke-width="6"/>
+    <path d="M68 132 H112" stroke-width="7"/>
+  </g>
+  <!-- Le français à gauche, le wolof à droite : les couleurs des deux drapeaux.
+       Volontairement plus vives que celles des drapeaux : sur ce bleu nuit, un
+       bleu foncé se perdrait dans le fond, surtout à la taille d'une icône. -->
+  <circle cx="46" cy="84" r="8" fill="#4C93FF"/>
+  <circle cx="134" cy="84" r="8" fill="#22C55E"/>
+</svg>
