@@ -46,6 +46,12 @@
   <label for="nom">Prénom du testeur</label>
   <input id="nom" type="text" autocomplete="off" placeholder="Awa" maxlength="16">
 
+  <label for="pour">Pour tester quoi ?</label>
+  <select id="pour">
+    <option value="interprete" selected>L’Interprète Français ↔ Wolof</option>
+    <option value="biba">BIBA, l’assistante</option>
+  </select>
+
   <label for="duree">Durée</label>
   <select id="duree">
     <option value="2" selected>2 heures</option>
@@ -64,13 +70,19 @@
 
   <p class="note">Le code cesse de marcher à l’heure indiquée, et après 15 questions.
   Passé ce point la personne ne peut plus rien consommer : elle doit t’en redemander un.
-  Ton code à toi n’a ni durée ni limite — ne le donne à personne.</p>
+  Ton code à toi n’a ni durée ni limite — ne le donne à personne.<br><br>
+  Ces codes ouvrent l’Interprète et BIBA. Ils n’ouvrent <b>pas</b> la console de GÉWEL :
+  celle-ci a son propre jeton, sans durée ni quota, qui donne accès à tes scénarios, tes
+  contacts et ton historique. Ce jeton-là ne se partage pas.</p>
 </main>
 
 <script>
-/* Cette page est servie depuis wolof.khalam.app, le serveur est ailleurs :
-   l'adresse doit donc être entière. Le serveur autorise expressément cette
-   origine — sans quoi le navigateur bloquerait l'appel avant même qu'il parte. */
+/* Cette page est servie depuis une adresse de KHALAM ; le serveur est
+   ailleurs, l'adresse d'appel doit donc être entière. Le serveur autorise
+   expressément cette origine — sans quoi le navigateur bloquerait l'appel
+   avant même qu'il parte. NE PAS recopier ce fichier à la main : passer par
+   outils-copie-site.mjs, sinon l'adresse redevient relative et la page meurt
+   en silence. */
 const SERVEUR = 'https://interprete-wolof.onrender.com';
 
 const $ = (id) => document.getElementById(id);
@@ -97,8 +109,14 @@ $('creer').onclick = async () => {
     // L'heure locale, pas l'heure du serveur : c'est celle qu'il lira sur sa montre.
     const heure = fin.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
     $('detail').textContent = `Valable jusqu’à ${heure}, et ${d.quota} questions.`;
-    messagePret = `Salam ${d.nom.charAt(0) + d.nom.slice(1).toLowerCase()}, voici ton accès à l’application KHALAM.\n\n`
-      + `Adresse : https://wolof.khalam.app\nCode : ${d.code}\n\n`
+    /* L'adresse suit ce qu'on veut faire tester. Le même code ouvre les deux —
+       il n'ouvre en revanche JAMAIS la console de GÉWEL, qui a son propre
+       jeton, sans durée ni quota, et qui ne se partage pas. */
+    const ou = $('pour').value === 'biba'
+      ? { nom: 'BIBA, l’assistante de KHALAM', adresse: 'https://gewel.khalam.app/biba.html' }
+      : { nom: 'l’Interprète Français ↔ Wolof', adresse: 'https://wolof.khalam.app' };
+    messagePret = `Salam ${d.nom.charAt(0) + d.nom.slice(1).toLowerCase()}, voici ton accès à ${ou.nom}.\n\n`
+      + `Adresse : ${ou.adresse}\nCode : ${d.code}\n\n`
       + `Le code marche jusqu’à ${heure} et pour ${d.quota} questions. Merci de tester !`;
     $('sortie').style.display = 'block';
   } catch (e) {

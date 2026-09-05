@@ -67,8 +67,12 @@
 </main>
 
 <script>
-/* Cette page est servie depuis wolof.khalam.app, le serveur est ailleurs :
-   l'adresse doit donc être entière. Le serveur autorise cette origine. */
+/* Cette page est servie depuis une adresse de KHALAM ; le serveur est
+   ailleurs, l'adresse d'appel doit donc être entière. Le serveur autorise
+   expressément cette origine — sans quoi le navigateur bloquerait l'appel
+   avant même qu'il parte. NE PAS recopier ce fichier à la main : passer par
+   outils-copie-site.mjs, sinon l'adresse redevient relative et la page meurt
+   en silence. */
 const SERVEUR = 'https://interprete-wolof.onrender.com';
 const $ = (id) => document.getElementById(id);
 try { $('maitre').value = localStorage.getItem('khalam.maitre') || ''; } catch {}
