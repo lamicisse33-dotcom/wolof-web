@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Codes de testeur — KHALAM</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --or:#C9A227; --nuit:#0B1020; --creme:#FFF7DC; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; padding:22px 18px 60px; background:var(--nuit); color:var(--creme);
+         font:16px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:520px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; color:var(--or); letter-spacing:.5px; }
+  p.sous { margin:0 0 26px; opacity:.6; font-size:14px; }
+  label { display:block; margin:18px 0 6px; font-size:13px; text-transform:uppercase;
+          letter-spacing:1px; opacity:.65; }
+  input, select, button { font:inherit; width:100%; padding:13px 14px; border-radius:12px;
+          border:1px solid rgba(255,247,220,.18); background:rgba(255,255,255,.05);
+          color:var(--creme); }
+  select { appearance:none; }
+  button { margin-top:24px; background:var(--or); color:#1a1405; border:0; font-weight:700;
+           font-size:17px; padding:16px; }
+  button:disabled { opacity:.45; }
+  button.secondaire { background:transparent; color:var(--creme); border:1px solid rgba(255,247,220,.25);
+           font-weight:500; font-size:15px; padding:13px; margin-top:10px; }
+  #sortie { margin-top:28px; display:none; }
+  .code { font:700 30px/1.25 ui-monospace,SFMono-Regular,Menlo,monospace; letter-spacing:2px;
+          text-align:center; color:var(--or); background:rgba(201,162,39,.09);
+          border:1px dashed rgba(201,162,39,.45); border-radius:16px; padding:22px 10px;
+          word-break:break-all; user-select:all; }
+  .detail { text-align:center; font-size:14px; opacity:.7; margin-top:12px; }
+  .erreur { color:#ff9d9d; margin-top:18px; font-size:15px; }
+  .note { margin-top:34px; font-size:13px; opacity:.5; line-height:1.6; border-top:1px solid rgba(255,247,220,.12);
+          padding-top:18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Codes de testeur</h1>
+  <p class="sous">Un code par personne. Il s’éteint tout seul.</p>
+
+  <label for="maitre">Ton code KHALAM</label>
+  <input id="maitre" type="password" autocomplete="off" placeholder="•••••••">
+
+  <label for="nom">Prénom du testeur</label>
+  <input id="nom" type="text" autocomplete="off" placeholder="Awa" maxlength="16">
+
+  <label for="duree">Durée</label>
+  <select id="duree">
+    <option value="2" selected>2 heures</option>
+    <option value="6">6 heures</option>
+    <option value="24">24 heures</option>
+  </select>
+
+  <button id="creer">Créer le code</button>
+  <div id="erreur" class="erreur" hidden></div>
+
+  <div id="sortie">
+    <div class="code" id="code"></div>
+    <div class="detail" id="detail"></div>
+    <button class="secondaire" id="copier">Copier le message à envoyer</button>
+  </div>
+
+  <p class="note">Le code cesse de marcher à l’heure indiquée, et après 15 questions.
+  Passé ce point la personne ne peut plus rien consommer : elle doit t’en redemander un.
+  Ton code à toi n’a ni durée ni limite — ne le donne à personne.</p>
+</main>
+
+<script>
+/* Cette page est servie depuis wolof.khalam.app, le serveur est ailleurs :
+   l'adresse doit donc être entière. Le serveur autorise expressément cette
+   origine — sans quoi le navigateur bloquerait l'appel avant même qu'il parte. */
+const SERVEUR = 'https://interprete-wolof.onrender.com';
+
+const $ = (id) => document.getElementById(id);
+try { $('maitre').value = localStorage.getItem('khalam.maitre') || ''; } catch {}
+$('maitre').oninput = () => { try { localStorage.setItem('khalam.maitre', $('maitre').value.trim()); } catch {} };
+
+let messagePret = '';
+
+$('creer').onclick = async () => {
+  $('erreur').hidden = true;
+  $('sortie').style.display = 'none';
+  $('creer').disabled = true;
+  try {
+    const r = await fetch(SERVEUR + '/api/code-testeur', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', 'x-code-acces': $('maitre').value.trim() },
+      body: JSON.stringify({ nom: $('nom').value, heures: Number($('duree').value) }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.erreur || 'Impossible de créer le code.');
+
+    $('code').textContent = d.code;
+    const fin = new Date(d.expire);
+    // L'heure locale, pas l'heure du serveur : c'est celle qu'il lira sur sa montre.
+    const heure = fin.toLocaleTimeString('fr-FR', { hour: '2-digit', minute: '2-digit' });
+    $('detail').textContent = `Valable jusqu’à ${heure}, et ${d.quota} questions.`;
+    messagePret = `Salam ${d.nom.charAt(0) + d.nom.slice(1).toLowerCase()}, voici ton accès à l’application KHALAM.\n\n`
+      + `Adresse : https://wolof.khalam.app\nCode : ${d.code}\n\n`
+      + `Le code marche jusqu’à ${heure} et pour ${d.quota} questions. Merci de tester !`;
+    $('sortie').style.display = 'block';
+  } catch (e) {
+    $('erreur').textContent = e.message;
+    $('erreur').hidden = false;
+  } finally {
+    $('creer').disabled = false;
+  }
+};
+
+$('copier').onclick = async () => {
+  try {
+    await navigator.clipboard.writeText(messagePret);
+    $('copier').textContent = 'Message copié';
+  } catch {
+    // Le presse-papier est refusé hors HTTPS et sur certains navigateurs :
+    // on montre le texte, il reste sélectionnable à la main.
+    $('detail').textContent = messagePret;
+  }
+  setTimeout(() => { $('copier').textContent = 'Copier le message à envoyer'; }, 2500);
+};
+</script>
+</body>
+</html>
