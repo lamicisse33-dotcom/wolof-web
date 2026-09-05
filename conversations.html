@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Ce qu'on demande à BIBA — KHALAM</title>
+<meta name="robots" content="noindex">
+<style>
+  :root { --or:#C9A227; --nuit:#0B1020; --creme:#FFF7DC; --rouge:#ff9d9d; }
+  * { box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+  body { margin:0; padding:22px 18px 60px; background:var(--nuit); color:var(--creme);
+         font:16px/1.55 -apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif; }
+  main { max-width:680px; margin:0 auto; }
+  h1 { font-size:22px; margin:0 0 4px; color:var(--or); letter-spacing:.5px; }
+  p.sous { margin:0 0 22px; opacity:.6; font-size:14px; }
+  label { display:block; margin:16px 0 6px; font-size:13px; text-transform:uppercase;
+          letter-spacing:1px; opacity:.65; }
+  input, button { font:inherit; width:100%; padding:13px 14px; border-radius:12px;
+          border:1px solid rgba(255,247,220,.18); background:rgba(255,255,255,.05); color:var(--creme); }
+  button { margin-top:18px; background:var(--or); color:#1a1405; border:0; font-weight:700; padding:15px; }
+  button.secondaire { background:transparent; border:1px solid rgba(255,247,220,.25);
+          color:var(--creme); font-weight:500; font-size:14px; padding:11px; margin-top:8px; }
+  button:disabled { opacity:.45; }
+  .chiffres { display:flex; gap:10px; margin:26px 0 6px; }
+  .chiffre { flex:1; background:rgba(255,255,255,.05); border-radius:14px; padding:14px; text-align:center; }
+  .chiffre b { display:block; font-size:26px; color:var(--or); font-weight:700; }
+  .chiffre span { font-size:12px; opacity:.6; }
+  .echange { border-top:1px solid rgba(255,247,220,.12); padding:16px 0; }
+  .quand { font-size:12px; opacity:.45; }
+  .q { margin:6px 0 8px; font-weight:600; }
+  .r { font-size:15px; opacity:.85; }
+  .fr { font-size:13px; opacity:.5; font-style:italic; margin-top:4px; }
+  .etiquette { display:inline-block; font-size:11px; letter-spacing:.6px; text-transform:uppercase;
+          border-radius:99px; padding:3px 9px; margin-left:8px; vertical-align:1px; }
+  .hors { background:rgba(255,157,157,.15); color:var(--rouge); }
+  .erreur { color:var(--rouge); margin-top:16px; }
+  .note { margin-top:34px; font-size:13px; opacity:.5; line-height:1.6;
+          border-top:1px solid rgba(255,247,220,.12); padding-top:18px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Ce qu'on demande à BIBA</h1>
+  <p class="sous">Les questions, sans les noms. Réservé à KHALAM.</p>
+
+  <label for="maitre">Ton code KHALAM</label>
+  <input id="maitre" type="password" autocomplete="off" placeholder="•••••••">
+  <button id="voir">Voir les conversations</button>
+  <button class="secondaire" id="filtre" hidden>Ne montrer que ce qui manquait à la base</button>
+  <div id="erreur" class="erreur" hidden></div>
+
+  <div id="chiffres" class="chiffres" hidden>
+    <div class="chiffre"><b id="n-total">0</b><span>questions posées</span></div>
+    <div class="chiffre"><b id="n-hors">0</b><span>hors de ta base</span></div>
+  </div>
+
+  <div id="liste"></div>
+
+  <p class="note">Les questions ne portent aucun prénom. Le journal et la liste des prénoms
+  sont deux fichiers séparés, et rien ne les relie : on sait ce qu'on demande à BIBA, on ne
+  sait pas qui l'a demandé.<br><br>
+  Ce qui compte le plus ici, ce sont les questions marquées <b>hors base</b> : ce sont celles
+  auxquelles BIBA n'a pas su répondre à partir de ce que tu as écrit. Chacune est une ligne
+  à ajouter à ta base.<br><br>
+  Provisoire, comme convenu. Pour tout éteindre : passer <code>JOURNAL</code> à <code>off</code>
+  sur Render, et plus rien n'est consigné.</p>
+</main>
+
+<script>
+/* Cette page est servie depuis wolof.khalam.app, le serveur est ailleurs :
+   l'adresse doit donc être entière. Le serveur autorise cette origine. */
+const SERVEUR = 'https://interprete-wolof.onrender.com';
+const $ = (id) => document.getElementById(id);
+try { $('maitre').value = localStorage.getItem('khalam.maitre') || ''; } catch {}
+$('maitre').oninput = () => { try { localStorage.setItem('khalam.maitre', $('maitre').value.trim()); } catch {} };
+
+let tout = [];
+let seulementHorsBase = false;
+
+const quandLisible = (iso) => {
+  const d = new Date(iso);
+  return d.toLocaleString('fr-FR', { day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit' });
+};
+
+function afficher() {
+  const liste = seulementHorsBase ? tout.filter((e) => !e.dans_la_base) : tout;
+  $('liste').innerHTML = liste.length ? liste.map((e) => `
+    <div class="echange">
+      <div class="quand">${quandLisible(e.horodatage)}${
+        e.dans_la_base ? '' : '<span class="etiquette hors">hors base</span>'}</div>
+      <div class="q">${echapper(e.question)}</div>
+      <div class="r">${echapper(e.reponse || '')}</div>
+      ${e.reponse_fr && e.reponse_fr !== e.reponse
+        ? `<div class="fr">${echapper(e.reponse_fr)}</div>` : ''}
+    </div>`).join('')
+    : '<div class="echange"><div class="r">Rien pour le moment.</div></div>';
+}
+
+// Ce qui vient du journal a été dicté par des inconnus : on l'affiche comme du
+// texte, jamais comme du code.
+function echapper(t) {
+  const d = document.createElement('div');
+  d.textContent = String(t == null ? '' : t);
+  return d.innerHTML;
+}
+
+$('voir').onclick = async () => {
+  $('erreur').hidden = true;
+  $('voir').disabled = true;
+  try {
+    const r = await fetch(SERVEUR + '/api/echanges', {
+      cache: 'no-store', headers: { 'x-code-acces': $('maitre').value.trim() },
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.erreur || 'Lecture impossible.');
+    tout = d.echanges || [];
+    $('n-total').textContent = d.total;
+    $('n-hors').textContent = d.hors_base;
+    $('chiffres').hidden = false;
+    $('filtre').hidden = false;
+    afficher();
+  } catch (e) {
+    $('erreur').textContent = e.message;
+    $('erreur').hidden = false;
+  } finally {
+    $('voir').disabled = false;
+  }
+};
+
+$('filtre').onclick = () => {
+  seulementHorsBase = !seulementHorsBase;
+  $('filtre').textContent = seulementHorsBase
+    ? 'Montrer toutes les questions'
+    : 'Ne montrer que ce qui manquait à la base';
+  afficher();
+};
+</script>
+</body>
+</html>
