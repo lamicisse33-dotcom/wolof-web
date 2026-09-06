@@ -47,6 +47,7 @@
   <input id="maitre" type="password" autocomplete="off" placeholder="•••••••">
   <button id="voir">Voir les conversations</button>
   <button class="secondaire" id="filtre" hidden>Ne montrer que ce qui manquait à la base</button>
+  <button class="secondaire" id="copier" hidden>Copier les questions</button>
   <div id="erreur" class="erreur" hidden></div>
 
   <div id="chiffres" class="chiffres" hidden>
@@ -122,6 +123,7 @@ $('voir').onclick = async () => {
     $('n-hors').textContent = d.hors_base;
     $('chiffres').hidden = false;
     $('filtre').hidden = false;
+    $('copier').hidden = false;
     afficher();
   } catch (e) {
     $('erreur').textContent = e.message;
@@ -129,6 +131,63 @@ $('voir').onclick = async () => {
   } finally {
     $('voir').disabled = false;
   }
+};
+
+/* Copier les questions, et RIEN d'autre.
+   Ni les réponses, ni les dates, ni les moteurs : ce qu'on veut lire ailleurs,
+   c'est ce que les gens demandent. Le reste alourdit et n'apprend rien.
+
+   Par paquets, comme sur la page du lexique : ChatGPT transforme un coller
+   trop long en pièce jointe, et on ne reçoit plus du texte mais un fichier. */
+const TAILLE_PAQUET = 1200;
+let paquets = [];
+let paquetCourant = 0;
+let signature = '';
+
+$('copier').onclick = async () => {
+  const questions = [...new Set(
+    (seulementHorsBase ? tout.filter((e) => !e.dans_la_base) : tout)
+      .map((e) => String(e.question || '').trim())
+      .filter(Boolean),
+  )];
+  if (!questions.length) { $('copier').textContent = 'Rien à copier'; return; }
+
+  const empreinte = questions.join('\n');
+  if (empreinte !== signature) {
+    signature = empreinte;
+    paquets = [];
+    let lot = [];
+    let taille = 0;
+    for (const q of questions) {
+      if (lot.length && taille + q.length + 1 > TAILLE_PAQUET) {
+        paquets.push(lot.join('\n')); lot = []; taille = 0;
+      }
+      lot.push(q); taille += q.length + 1;
+    }
+    if (lot.length) paquets.push(lot.join('\n'));
+    paquetCourant = 0;
+  }
+  if (paquetCourant >= paquets.length) paquetCourant = 0;
+
+  const morceau = paquets[paquetCourant];
+  paquetCourant += 1;
+  try {
+    await navigator.clipboard.writeText(morceau);
+  } catch {
+    const z = document.createElement('textarea');
+    z.value = morceau;
+    z.style.cssText = 'position:fixed;top:15%;left:5%;width:90%;height:65%;z-index:99;font-size:16px';
+    document.body.appendChild(z);
+    z.select();
+    z.onblur = () => z.remove();
+    $('copier').textContent = 'Sélectionnez et copiez';
+    return;
+  }
+  $('copier').textContent = paquets.length === 1
+    ? `${questions.length} question(s) copiée(s)`
+    : (paquetCourant >= paquets.length
+      ? 'Tout est copié — recommencer'
+      : `Copier le paquet ${paquetCourant + 1} sur ${paquets.length}`);
 };
 
 $('filtre').onclick = () => {
